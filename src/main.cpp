@@ -1,4 +1,16 @@
+#include "main.h" 
+#include "lemlib/api.hpp"
+#include "lemlib/timer.hpp"
+#include "pros/abstract_motor.hpp"
+#include "pros/adi.hpp"
+#include "pros/device.hpp"
+#include "pros/misc.h"
+#include "pros/motor_group.hpp"
+#include "pros/motors.h"
+#include "pros/optical.hpp"
+#include "pros/rtos.hpp"
 #include "main.h"
+#include "auton.h"
 
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
