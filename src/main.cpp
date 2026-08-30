@@ -17,21 +17,21 @@ pros::Controller controller(pros::E_CONTROLLER_MASTER);
 pros::MotorGroup left_motor_group({1, 2}, pros::MotorGearset::blue);
 pros::MotorGroup right_motor_group({3, 4}, pros::MotorGearset::blue);
 pros::Motor intake(5);
-pros::MotorGroup lift({7, 8}, pros::MotorGearset::green);
-pros::Motor claw(6, pros::E_MOTOR_GEARSET_36, false);
-pros::Motor rotationMech(9, pros::E_MOTOR_GEARSET_36, false);
+pros::MotorGroup lift({6, -7}, pros::MotorGearset::green);
+pros::Motor claw(8, pros::v5::MotorGears::red);
+pros::Motor rotationMech(9, pros::v5::MotorGears::red);
 
 pros::Imu imu(10);
 
 
 enum class LiftState {
-    ONE
-    TWO
-    THREE
-    FOUR
+    Bottom,
+    Low,
+    High,
+    Top
 };
 
-current_lift_state = LiftState::ONE;
+LiftState current_lift_state = LiftState::Bottom;
 
 double getDegreesForState(LiftState state) {
     switch (state) {
@@ -43,50 +43,55 @@ double getDegreesForState(LiftState state) {
     }
 }
 
-// Cycle up through the presets
-void cycleLiftUp() {
-    if (selectedState == LiftState::Bottom)      selectedState = LiftState::Low;
-    else if (selectedState == LiftState::Low)    selectedState = LiftState::High;
-    else if (selectedState == LiftState::High)   selectedState = LiftState::Top;
-}
-
-// Cycle Down through the presets
-void cycleLiftDown() {
-    if (selectedState == LiftState::Top)         selectedState = LiftState::High;
-    else if (selectedState == LiftState::High)   selectedState = LiftState::Low;
-    else if (selectedState == LiftState::Low)    selectedState = LiftState::Bottom;
-}
-
 void moveLiftToState(LiftState state) {
-    double targetDegrees = getDegreesForState(LiftState state);
-    lift.move(targetDegrees, degrees);
+    double targetDegrees = getDegreesForState(state);
+    lift.move_absolute(targetDegrees, 100);
+}
+
+// Cycle up through the presets and move the lift to the new preset
+void cycleLiftUp() {
+    if (current_lift_state == LiftState::Bottom)      current_lift_state = LiftState::Low;
+    else if (current_lift_state == LiftState::Low)    current_lift_state = LiftState::High;
+    else if (current_lift_state == LiftState::High)   current_lift_state = LiftState::Top;
+    moveLiftToState(current_lift_state);
+}
+
+// Cycle down through the presets and move the lift to the new preset
+void cycleLiftDown() {
+    if (current_lift_state == LiftState::Top)         current_lift_state = LiftState::High;
+    else if (current_lift_state == LiftState::High)   current_lift_state = LiftState::Low;
+    else if (current_lift_state == LiftState::Low)    current_lift_state = LiftState::Bottom;
+    moveLiftToState(current_lift_state);
 }
 
 void handleClaw() {
-    int clawState = 0; // 0 for closed, 1 for open
-    if ((clawState == 0) && (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X))) {
+    static int clawState = 0; // 0 for closed, 1 for open
+    if (clawState == 0) {
         clawState = 1;
         claw.move(120);
-        wait(0.5, seconds); 
-        claw.stop(brake);
-    }
-    if ((clawState == 1) && (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X))) {
+        pros::delay(500);
+        claw.brake();
+    } else {
         clawState = 0;
         claw.move(-120);
-        wait(0.5, seconds); 
-        claw.stop(brake);
+        pros::delay(500);
+        claw.brake();
     }
 }
 
 void pullFromIntake() {
     claw.move(120);
-    wait(0.5, seconds); 
-    claw.stop(brake);
-    rotationMech.move_absolute(90, degrees);
+    pros::delay(500);
+    claw.brake();
+    rotationMech.move_absolute(90, 100);
 }
 
 
-lemlib::OdomSensors sensors(&imu);
+lemlib::OdomSensors sensors(nullptr, // no vertical tracking wheel
+                             nullptr, // no second vertical tracking wheel
+                             nullptr, // no horizontal tracking wheel
+                             nullptr, // no second horizontal tracking wheel
+                             &imu);
 
 // drivetrain settings
 lemlib::Drivetrain drivetrain(&left_motor_group, // left motor group
@@ -227,33 +232,38 @@ void autonomous() {}
 void opcontrol() {
     // loop forever
     while (true) {
-        // get left y and right x positions
+        // get left y (throttle) and right x (turn) positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        int leftX = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X);
+        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
 
         // move the robot
-        chassis.curvature(leftY, leftX);
+        // NOTE: chassis.arcade() takes (throttle, turn), but on this robot that maps to
+        // (rightX, leftY) in practice -- passing (leftY, rightX) made left steer and right move.
+        // leftY is negated because pushing the stick forward was driving the robot backward.
+        // rightX is negated because pushing the stick left was turning the robot right.
+        chassis.arcade(-rightX, -leftY);
 
         // control the intake
-        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R1)) {
+        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
             intake.move(120);
-        } else if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R2)) {
+        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
             intake.move(-120);
         } else {
             intake.brake();
         };
 
-
         //move the lift
-        controller.ButtonL1.pressed(onUpPressed);   
-        controller.ButtonL2.pressed(onDownPressed); 
-        controller.ButtonA.pressed(onGoPressed);    
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L1)) {
+            cycleLiftUp();
+        } else if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L2)) {
+            cycleLiftDown();
+        }
 
-        controller.ButtonX.pressed(handleClaw);
-        controller.ButtonX 
-       
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
+            handleClaw();
         }
 
         // delay to save resources
         pros::delay(25);
     }
+}
