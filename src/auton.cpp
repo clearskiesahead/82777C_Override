@@ -67,6 +67,37 @@ void noSensorAuton() {
 //main 15 second auton
 
 void mainAuton() {
-    chassis.setPose(); //insert values as x, y, sensor reading, theta
-    chassis.moveToPoint()
+    chassis.setPose(chassis.getPose().x, chassis.getPose().y, getFront(), chassis.getPose().theta); //insert values as x, y, sensor reading, theta
+    //move away from toggle
+    chassis.moveToPoint(-48, 0, 2000);
+    //move towards alliance goal
+    chassis.turnToHeading(-90, degrees, 2000);
+    lift.move_absolute(300, degrees);
+    chassis.setPose(chassis.getPose().x, chassis.getPose().y, getLeft(), chassis.getPose().theta); //insert values as x, y, sensor reading, theta
+    chassis.moveToPoint(-48, 22, 1000, {.forwards = false});
+    //score in alliance goal
+    lift.move_absolute(200, degrees);
+    claw.move(120);
+    pros::c::delay(100);
+    claw.stop
+    //move towards nearby stack
+    chassis.moveToPoint(-48, 12, 1000,);
+    chassis.moveToPose(-23, -23, 135, 1000, {.forwards = false});
+    //grab nearby stack
+    claw.move(-120);
+    pros::c::delay(100);
+    claw.stop();
+    //move towards alliance goal
+    chassis.moveToPoint(-48, 12, 1000);
+    chassis.turnToPoint(-48, 24, 1000);
+    chassis.moveToPoint(-48, 22, 1000);
+    lift.move_absolute(300, degrees);
+    //score on alliance goal
+    lift.move_absolute(200, degrees);
+    claw.move(120);
+    pros::c::delay(100);
+    claw.stop();
+    printf("Auton complete");
+    printf("Final X: %f", chassis.getPose().x);
+    printf("Final Y: %f", chassis.getPose().y);
 }
