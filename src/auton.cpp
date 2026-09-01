@@ -35,7 +35,7 @@ float getRight() {
 }
 
 //preliminary auton using no sensors
-// void noSensorAuton() {
+void noSensorAuton() {
 //     //robot switches toggle before compmleting rest of routine
 //     chassis.move(-10);
 //     pros::c::delay(250);
@@ -69,7 +69,7 @@ float getRight() {
 //     claw.move(120);
 //     pros::c::delay(100);
 //     claw.stop();
-// }
+}
 
 //main 15 second auton
 
@@ -79,31 +79,31 @@ void mainAuton() {
     chassis.moveToPoint(-48, 0, 2000);
     //move towards alliance goal
     chassis.turnToHeading(-90, 2000);
-    lift.move_absolute(300);
+    lift.move_absolute(300, 110);
     chassis.setPose(chassis.getPose().x, chassis.getPose().y, getLeft(), chassis.getPose().theta); //insert values as x, y, sensor reading, theta
     chassis.moveToPoint(-48, 22, 1000, {.forwards = false});
     //score in alliance goal
-    lift.move_absolute(200);
+    lift.move_absolute(200, 110);
     claw.move(120);
     pros::c::delay(100);
-    claw.stop
+    claw.brake();
     //move towards nearby stack
-    chassis.moveToPoint(-48, 12, 1000,);
+    chassis.moveToPoint(-48, 12, 1000);
     chassis.moveToPose(-23, -23, 135, 1000, {.forwards = false});
     //grab nearby stack
     claw.move(-120);
     pros::c::delay(100);
-    claw.stop();
+    claw.brake();
     //move towards alliance goal
     chassis.moveToPoint(-48, 12, 1000);
     chassis.turnToPoint(-48, 24, 1000);
     chassis.moveToPoint(-48, 22, 1000);
-    lift.move_absolute(300);
+    lift.move_absolute(300, 110);
     //score on alliance goal
-    lift.move_absolute(200);
+    lift.move_absolute(200, 110);
     claw.move(120);
     pros::c::delay(100);
-    claw.stop();
+    claw.brake();
     printf("Auton complete");
     printf("Final X: %f", chassis.getPose().x);
     printf("Final Y: %f", chassis.getPose().y);

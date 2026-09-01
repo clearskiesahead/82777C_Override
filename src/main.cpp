@@ -20,6 +20,10 @@ pros::Motor intake(5);
 pros::MotorGroup lift({6, -7}, pros::MotorGearset::green);
 pros::Motor claw(8, pros::v5::MotorGears::red);
 pros::Motor rotationMech(9, pros::v5::MotorGears::red);
+pros::Distance backdistance('A');
+pros::Distance frontdistance('B');
+pros::Distance leftdistance('C');
+pros::Distance rightdistance('D');
 
 pros::Imu imu(10);
 
@@ -214,7 +218,7 @@ void competition_initialize() {}
  * from where it left off.
  */
 void autonomous() {
-    noSensorAuton();
+    mainAuton();
 }
 
 /**
