@@ -37,6 +37,8 @@ enum class LiftState {
 
 LiftState current_lift_state = LiftState::Bottom;
 
+rotationMechState = 0
+
 double getDegreesForState(LiftState state) {
     switch (state) {
         case LiftState::Bottom: return 0.0;
@@ -263,6 +265,14 @@ void opcontrol() {
 
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
             handleClaw();
+        }
+
+        if ((rotationMechState = 0) && controller.get_digital_new_press(pro::E_CONTROLLER_DIGITAL_Y)) {
+            rotationMech.move_absolute(90);
+            rotationMechState = 1;
+        } else if ((rotationMechState = 0) && controller.get_digital_new_press(pro::E_CONTROLLER_DIGITAL_Y)) {
+            rotationMech.move_absolute(90);
+            rotationMechState = 1;
         }
 
         // delay to save resources
