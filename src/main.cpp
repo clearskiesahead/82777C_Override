@@ -49,7 +49,7 @@ double getDegreesForState(LiftState state) {
 
 void moveLiftToState(LiftState state) {
     double targetDegrees = getDegreesForState(state);
-    lift.move_absolute(targetDegrees, 100);
+    lift.move_absolute(targetDegrees, 50);
 }
 
 // Cycle up through the presets and move the lift to the new preset
