@@ -243,11 +243,7 @@ void opcontrol() {
         int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
 
         // move the robot
-        // NOTE: chassis.arcade() takes (throttle, turn), but on this robot that maps to
-        // (rightX, leftY) in practice -- passing (leftY, rightX) made left steer and right move.
-        // leftY is negated because pushing the stick forward was driving the robot backward.
-        // rightX is negated because pushing the stick left was turning the robot right.
-        chassis.arcade(-rightX, -leftY);
+        chassis.arcade(leftY, rightX);
 
         // control the intake
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
