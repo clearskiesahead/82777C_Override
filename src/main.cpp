@@ -41,8 +41,8 @@ double getDegreesForState(LiftState state) {
     switch (state) {
         case LiftState::Bottom: return 0.0;
         case LiftState::Low:    return 300.0;
-        case LiftState::High:   return 600.0;
-        case LiftState::Top:    return 900.0;
+        case LiftState::High:   return 900.0;
+        case LiftState::Top:    return 1200.0;
         default:                return 0.0;
     }
 }
