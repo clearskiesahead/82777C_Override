@@ -14,8 +14,8 @@
 
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
-pros::MotorGroup left_motor_group({1, 2}, pros::MotorGearset::blue);
-pros::MotorGroup right_motor_group({3, 4}, pros::MotorGearset::blue);
+pros::MotorGroup left_motor_group({3, 4}, pros::MotorGearset::blue);
+pros::MotorGroup right_motor_group({1, 2}, pros::MotorGearset::blue);
 pros::Motor intake(5);
 pros::MotorGroup lift({6, -7}, pros::MotorGearset::green);
 pros::Motor claw(8, pros::v5::MotorGears::red);
@@ -242,10 +242,10 @@ void opcontrol() {
     while (true) {
         // get left y (throttle) and right x (turn) positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+        int leftX = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X);
 
         // move the robot
-        chassis.arcade(leftY, rightX);
+        chassis.arcade(leftY, leftX);
 
         // control the intake
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
