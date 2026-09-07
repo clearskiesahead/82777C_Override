@@ -95,6 +95,16 @@ void handleClaw() {
     }
 }
 
+void handleRotation() {
+    if (rotationMechState == 0) {
+        rotationMechState = 1;
+        rotationMech.move_absolute(-270, 100);
+    } else {
+        rotationMechState = 0;
+        rotationMech.move_absolute(0, 100);
+    }
+}
+
 void pullFromIntake() {
     claw.move(120);
     pros::delay(500);
@@ -187,6 +197,8 @@ void on_center_button() {
  */
 void initialize() {
     pros::lcd::initialize(); // initialize brain screen
+    claw.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); // actively hold position instead of coasting after claw.brake()
+    rotationMech.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); // resist gravity/external torque once at target
     chassis.calibrate(); // calibrate sensors
 
     lift.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
@@ -257,7 +269,8 @@ void opcontrol() {
         int leftX = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X);
 
         // move the robot
-        chassis.arcade(leftX, leftY);
+        // turn is negated because swapping the left/right motor ports (3/4 <-> 1/2) reversed turn direction
+        chassis.arcade(-leftX, leftY);
 
         // control the intake
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
@@ -281,9 +294,14 @@ void opcontrol() {
 
         int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
         if (std::abs(rightY) > 10) { // 10 is a small deadband to prevent stick drift
-            lift.move(rightY); 
-        } else { 
-            lift.move(0); 
+            lift.move(rightY);
+        } else {
+            lift.move(0);
+        }
+
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
+            handleRotation();
+        }
         }
 
         // delay to save resources
