@@ -71,11 +71,12 @@ int rotationMechState = 0;
 // }
 
 void zeroLift() {
-    lift.move_absolute(0, 100);
-    rotationMech.move_absolute(-90);
-    claw.move()
+    lift.move(-70);
+    rotationMech.move_absolute(-90, 100);
+    claw.move(120);
     pros::delay(200);
-    lift.stop(E_MOTOR_BRAKE_COAST);
+    claw.brake();
+    lift.brake();
 
 }
 
@@ -97,7 +98,7 @@ void handleClaw() {
 void pullFromIntake() {
     claw.move(120);
     pros::delay(500);
-    claw.stop(E_MOTOR_BRAKE_HOLD);
+    claw.brake();
     rotationMech.move_absolute(90, 100);
 }
 
@@ -268,11 +269,11 @@ void opcontrol() {
         };
 
         //move the lift
-        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L1)) {
-            cycleLiftUp();
-        } else if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L2)) {
-            cycleLiftDown();
-        }
+        // if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L1)) {
+        //     cycleLiftUp();
+        // } else if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L2)) {
+        //     cycleLiftDown();
+        // }
 
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
             handleClaw();
@@ -280,7 +281,7 @@ void opcontrol() {
 
         int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
         if (std::abs(rightY) > 10) { // 10 is a small deadband to prevent stick drift
-            lift.move(rightY, 70); 
+            lift.move(rightY); 
         } else { 
             lift.move(0); 
         }
