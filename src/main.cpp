@@ -39,35 +39,44 @@ LiftState current_lift_state = LiftState::Bottom;
 
 int rotationMechState = 0;
 
-double getDegreesForState(LiftState state) {
-    switch (state) {
-        case LiftState::Bottom: return 0.0;
-        case LiftState::Low:    return 300.0;
-        case LiftState::High:   return 900.0;
-        case LiftState::Top:    return 1200.0;
-        default:                return 0.0;
-    }
-}
+// double getDegreesForState(LiftState state) {
+//     switch (state) {
+//         case LiftState::Bottom: return 0.0;
+//         case LiftState::Low:    return 300.0;
+//         case LiftState::High:   return 900.0;
+//         case LiftState::Top:    return 1200.0;
+//         default:                return 0.0;
+//     }
+// }
 
-void moveLiftToState(LiftState state) {
-    double targetDegrees = getDegreesForState(state);
-    lift.move_absolute(targetDegrees, 50);
-}
+// void moveLiftToState(LiftState state) {
+//     double targetDegrees = getDegreesForState(state);
+//     lift.move_absolute(targetDegrees, 50);
+// }
 
-// Cycle up through the presets and move the lift to the new preset
-void cycleLiftUp() {
-    if (current_lift_state == LiftState::Bottom)      current_lift_state = LiftState::Low;
-    else if (current_lift_state == LiftState::Low)    current_lift_state = LiftState::High;
-    else if (current_lift_state == LiftState::High)   current_lift_state = LiftState::Top;
-    moveLiftToState(current_lift_state);
-}
+// // Cycle up through the presets and move the lift to the new preset
+// void cycleLiftUp() {
+//     if (current_lift_state == LiftState::Bottom)      current_lift_state = LiftState::Low;
+//     else if (current_lift_state == LiftState::Low)    current_lift_state = LiftState::High;
+//     else if (current_lift_state == LiftState::High)   current_lift_state = LiftState::Top;
+//     moveLiftToState(current_lift_state);
+// }
 
-// Cycle down through the presets and move the lift to the new preset
-void cycleLiftDown() {
-    if (current_lift_state == LiftState::Top)         current_lift_state = LiftState::High;
-    else if (current_lift_state == LiftState::High)   current_lift_state = LiftState::Low;
-    else if (current_lift_state == LiftState::Low)    current_lift_state = LiftState::Bottom;
-    moveLiftToState(current_lift_state);
+// // Cycle down through the presets and move the lift to the new preset
+// void cycleLiftDown() {
+//     if (current_lift_state == LiftState::Top)         current_lift_state = LiftState::High;
+//     else if (current_lift_state == LiftState::High)   current_lift_state = LiftState::Low;
+//     else if (current_lift_state == LiftState::Low)    current_lift_state = LiftState::Bottom;
+//     moveLiftToState(current_lift_state);
+// }
+
+void zeroLift() {
+    lift.move_absolute(0, 100);
+    rotationMech.move_absolute(-90);
+    claw.move()
+    pros::delay(200);
+    lift.stop(E_MOTOR_BRAKE_COAST);
+
 }
 
 void handleClaw() {
@@ -88,7 +97,7 @@ void handleClaw() {
 void pullFromIntake() {
     claw.move(120);
     pros::delay(500);
-    claw.brake();
+    claw.stop(E_MOTOR_BRAKE_HOLD);
     rotationMech.move_absolute(90, 100);
 }
 
@@ -178,6 +187,8 @@ void on_center_button() {
 void initialize() {
     pros::lcd::initialize(); // initialize brain screen
     chassis.calibrate(); // calibrate sensors
+
+    lift.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
     // print position to brain screen
     pros::Task screen_task([&]() {
         while (true) {
@@ -265,6 +276,13 @@ void opcontrol() {
 
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
             handleClaw();
+        }
+
+        int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
+        if (std::abs(rightY) > 10) { // 10 is a small deadband to prevent stick drift
+            lift.move(rightY, 70); 
+        } else { 
+            lift.move(0); 
         }
 
         // delay to save resources
