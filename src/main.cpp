@@ -91,11 +91,11 @@ void handleClaw() {
         clawState = 0;
         claw.move(-120);
         pros::delay(500);
-        claw.brake();
+        claw.move(-60);
     }
 }
 
-void handleRotation() {
+void handleRotation() {+
     if (rotationMechState == 0) {
         rotationMechState = 1;
         rotationMech.move_absolute(-270, 100);
