@@ -95,7 +95,7 @@ void handleClaw() {
     }
 }
 
-void handleRotation() {+
+void handleRotation() {
     if (rotationMechState == 0) {
         rotationMechState = 1;
         rotationMech.move_absolute(-270, 100);
@@ -270,7 +270,7 @@ void opcontrol() {
     while (true) {
         // get left y (throttle) and right x (turn) positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X);
+        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
 
         // move the robot
         // turn is negated because swapping the left/right motor ports (3/4 <-> 1/2) reversed turn direction
@@ -311,7 +311,7 @@ void opcontrol() {
         }
 
 
-        if (controller.get_digital_new_press(E_CONTROLLER_DIGITAL_L1)) {
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
             zeroLift();
         }
 
