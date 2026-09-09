@@ -72,9 +72,9 @@ int rotationMechState = 0;
 
 void zeroLift() {
     lift.move(-70);
-    rotationMech.move_absolute(-90, 100);
+    rotationMech.move_absolute(90, 100);
     claw.move(120);
-    pros::delay(200);
+    pros::delay(500);
     claw.brake();
     lift.brake();
 
@@ -107,9 +107,13 @@ void handleRotation() {+
 
 void pullFromIntake() {
     claw.move(120);
-    pros::delay(500);
-    claw.brake();
+    lift.move_absolute(50, 100);
+    pros::delay(200);
+    claw.move(-120);
+    pros::delay(100);
+    claw.move(-60);
     rotationMech.move_absolute(90, 100);
+    rotationMech.brake();
 }
 
 
@@ -266,16 +270,16 @@ void opcontrol() {
     while (true) {
         // get left y (throttle) and right x (turn) positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        int leftX = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X);
+        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X);
 
         // move the robot
         // turn is negated because swapping the left/right motor ports (3/4 <-> 1/2) reversed turn direction
-        chassis.arcade(-leftX, leftY);
+        chassis.arcade(-rightX, leftY);
 
         // control the intake
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
             intake.move(120);
-        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
             intake.move(-120);
         } else {
             intake.brake();
@@ -288,20 +292,27 @@ void opcontrol() {
         //     cycleLiftDown();
         // }
 
-        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
             handleClaw();
         }
 
-        int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
-        if (std::abs(rightY) > 10) { // 10 is a small deadband to prevent stick drift
-            lift.move(rightY);
-        } else {
-            lift.move(0);
-        }
-
-        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)) {
             handleRotation();
         }
+
+        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+            lift.move(90);  // Move Up (Full power)
+        } 
+        else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+            lift.move(-90); // Move Down (Full power)
+        } 
+        else {
+            lift.brake();      // Automatically brakes due to HOLD mode
+        }
+
+
+        if (controller.get_digital_new_press(E_CONTROLLER_DIGITAL_L1)) {
+            zeroLift();
         }
 
         // delay to save resources
