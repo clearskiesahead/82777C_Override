@@ -106,14 +106,20 @@ void handleRotation() {
 }
 
 void pullFromIntake() {
+    // set claw to open
     clawState = 1;
     handleClaw();
     lift.move_absolute(50, 100);
+    //move lift to position for claw to intake transition
     pros::delay(200);
+    //face claw downwward
     rotationMech.move_absolute(-270, 100);
+    //grab from intake then apply constant claw pressure
+    lift.move_absolute(0, 100);
     claw.move(-120);
     pros::delay(100);
     claw.move(-60);
+    lift.move_absolute(100, 100);
     rotationMech.move_absolute(90, 100);
     rotationMech.brake();
 }
