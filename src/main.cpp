@@ -38,6 +38,7 @@ enum class LiftState {
 LiftState current_lift_state = LiftState::Bottom;
 
 int rotationMechState = 1;
+int clawState = 0;
 
 // double getDegreesForState(LiftState state) {
 //     switch (state) {
@@ -80,8 +81,7 @@ void zeroLift() {
 
 }
 
-void handleClaw() {
-    static int clawState = 0; // 0 for closed, 1 for open
+void handleClaw() { // 0 for closed, 1 for open
     if (clawState == 0) {
         clawState = 1;
         claw.move(120);
@@ -106,9 +106,11 @@ void handleRotation() {
 }
 
 void pullFromIntake() {
-    claw.move(120);
+    clawState = 1;
+    handleClaw();
     lift.move_absolute(50, 100);
     pros::delay(200);
+    rotationMech.move_absolute(-270, 100);
     claw.move(-120);
     pros::delay(100);
     claw.move(-60);
