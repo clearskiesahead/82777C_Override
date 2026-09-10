@@ -37,7 +37,7 @@ enum class LiftState {
 
 LiftState current_lift_state = LiftState::Bottom;
 
-int rotationMechState = 0;
+int rotationMechState = 1;
 
 // double getDegreesForState(LiftState state) {
 //     switch (state) {
