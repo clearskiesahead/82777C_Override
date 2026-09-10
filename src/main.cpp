@@ -25,7 +25,7 @@ pros::Distance frontdistance('B');
 pros::Distance leftdistance('C');
 pros::Distance rightdistance('D');
 
-pros::Imu imu(10);
+pros::Imu imu(20);
 
 
 enum class LiftState {
@@ -250,7 +250,11 @@ void competition_initialize() {}
  * from where it left off.
  */
 void autonomous() {
-    mainAuton();
+    // set position to x:0, y:0, heading:0
+    chassis.setPose(0, 0, 0);
+    // turn to face heading 90 with a very long timeout
+    chassis.moveToPoint(10, 0, 5000);
+    chassis.turnToHeading(90, 5000);
 }
 
 /**

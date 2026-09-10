@@ -108,3 +108,7 @@ void mainAuton() {
     printf("Final X: %f", chassis.getPose().x);
     printf("Final Y: %f", chassis.getPose().y);
 }
+
+void pidTest() {
+     //insert values as x, y, sensor reading, theta
+}
