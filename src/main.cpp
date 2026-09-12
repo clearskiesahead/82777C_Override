@@ -208,24 +208,28 @@ void on_center_button() {
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-    pros::lcd::initialize(); // initialize brain screen
-    claw.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); // actively hold position instead of coasting after claw.brake()
-    rotationMech.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); // resist gravity/external torque once at target
-    chassis.calibrate(); // calibrate sensors
-
+    pros::lcd::initialize();
+    claw.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); 
+    rotationMech.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); 
     lift.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
-    // print position to brain screen
+
+    chassis.calibrate(); 
+
+    // forces the brain to pause here until the IMU is completely done calibrating
+    while (imu.is_calibrating()) {
+        pros::delay(10);
+    }
+
     pros::Task screen_task([&]() {
         while (true) {
-            // print robot location to the brain screen
-            pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
-            pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
-            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-            // delay to save resources
+            pros::lcd::print(0, "X: %f", chassis.getPose().x); 
+            pros::lcd::print(1, "Y: %f", chassis.getPose().y); 
+            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); 
             pros::delay(20);
         }
     });
 }
+
 /**
  * Runs while the robot is in the disabled state of Field Management System or
  * the VEX Competition Switch, following either autonomous or opcontrol. When
