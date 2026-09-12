@@ -2,6 +2,7 @@
 
 void noSensorAuton();
 void mainAuton();
+void pidTest();
 
 extern float getBack();
 extern float getFront();

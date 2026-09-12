@@ -25,7 +25,7 @@ pros::Distance frontdistance('B');
 pros::Distance leftdistance('C');
 pros::Distance rightdistance('D');
 
-pros::Imu imu(10);
+pros::Imu imu(20);
 
 
 enum class LiftState {
@@ -37,7 +37,8 @@ enum class LiftState {
 
 LiftState current_lift_state = LiftState::Bottom;
 
-int rotationMechState = 0;
+int rotationMechState = 1;
+int clawState = 0;
 
 // double getDegreesForState(LiftState state) {
 //     switch (state) {
@@ -72,16 +73,15 @@ int rotationMechState = 0;
 
 void zeroLift() {
     lift.move(-70);
-    rotationMech.move_absolute(-90, 100);
+    rotationMech.move_absolute(90, 100);
     claw.move(120);
-    pros::delay(200);
+    pros::delay(500);
     claw.brake();
     lift.brake();
 
 }
 
-void handleClaw() {
-    static int clawState = 0; // 0 for closed, 1 for open
+void handleClaw() { // 0 for closed, 1 for open
     if (clawState == 0) {
         clawState = 1;
         claw.move(120);
@@ -91,7 +91,7 @@ void handleClaw() {
         clawState = 0;
         claw.move(-120);
         pros::delay(500);
-        claw.brake();
+        claw.move(-60);
     }
 }
 
@@ -106,10 +106,22 @@ void handleRotation() {
 }
 
 void pullFromIntake() {
-    claw.move(120);
-    pros::delay(500);
-    claw.brake();
+    // set claw to open
+    clawState = 1;
+    handleClaw();
+    lift.move_absolute(50, 100);
+    //move lift to position for claw to intake transition
+    pros::delay(200);
+    //face claw downwward
+    rotationMech.move_absolute(-270, 100);
+    //grab from intake then apply constant claw pressure
+    lift.move_absolute(0, 100);
+    claw.move(-120);
+    pros::delay(100);
+    claw.move(-60);
+    lift.move_absolute(100, 100);
     rotationMech.move_absolute(90, 100);
+    rotationMech.brake();
 }
 
 
@@ -244,7 +256,11 @@ void competition_initialize() {}
  * from where it left off.
  */
 void autonomous() {
-    mainAuton();
+    // set position to x:0, y:0, heading:0
+    chassis.setPose(0, 0, 0);
+    // turn to face heading 90 with a very long timeout
+    chassis.moveToPoint(10, 0, 5000);
+    chassis.turnToHeading(90, 5000);
 }
 
 /**
@@ -266,16 +282,16 @@ void opcontrol() {
     while (true) {
         // get left y (throttle) and right x (turn) positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        int leftX = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X);
+        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
 
         // move the robot
         // turn is negated because swapping the left/right motor ports (3/4 <-> 1/2) reversed turn direction
-        chassis.arcade(-leftX, leftY);
+        chassis.arcade(-rightX, leftY);
 
         // control the intake
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
             intake.move(120);
-        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
             intake.move(-120);
         } else {
             intake.brake();
@@ -288,19 +304,13 @@ void opcontrol() {
         //     cycleLiftDown();
         // }
 
-        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
             handleClaw();
         }
 
-        int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
-        if (std::abs(rightY) > 10) { // 10 is a small deadband to prevent stick drift
-            lift.move(rightY);
-        } else {
-            lift.move(0);
-        }
-
-        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)) {
             handleRotation();
+        }
         }
 
         // delay to save resources
