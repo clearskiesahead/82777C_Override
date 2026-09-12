@@ -311,7 +311,6 @@ void opcontrol() {
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)) {
             handleRotation();
         }
-        }
 
         // delay to save resources
         pros::delay(25);
