@@ -37,7 +37,7 @@ enum class LiftState {
 
 LiftState current_lift_state = LiftState::Bottom;
 
-int rotationMechState = 1;
+int rotationMechState = 0; // 0 = resting at 0 (down), matching the mechanism's actual position at boot
 int clawState = 0;
 
 // double getDegreesForState(LiftState state) {
@@ -74,9 +74,11 @@ int clawState = 0;
 void zeroLift() {
     lift.move(-70);
     rotationMech.move_absolute(90, 100);
+    rotationMechState = 0; // 90 is closer to the down (0) reference than up (-270)
     claw.move(120);
     pros::delay(500);
     claw.brake();
+    clawState = 1; // claw ends up open
     lift.brake();
 
 }
@@ -143,13 +145,16 @@ void pullFromIntake() {
     pros::delay(200);
     //face claw downwward
     rotationMech.move_absolute(-270, 100);
+    rotationMechState = 1; // now at the up (-270) reference
     //grab from intake then apply constant claw pressure
     lift.move_absolute(0, 100);
     claw.move(-120);
     pros::delay(100);
     claw.move(-60);
+    clawState = 0; // claw ends up closed
     lift.move_absolute(100, 100);
     rotationMech.move_absolute(90, 100);
+    rotationMechState = 0; // 90 is closer to the down (0) reference than up (-270)
     rotationMech.brake();
 }
 
