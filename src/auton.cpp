@@ -11,7 +11,7 @@
 #include "auton.h"
 
 extern lemlib::Chassis chassis;
-extern pros::Motor lift;
+extern pros::MotorGroup lift;
 extern pros::Motor claw;
 extern pros::Distance backdistance; 
 extern pros::Distance frontdistance;
@@ -74,13 +74,13 @@ void noSensorAuton() {
 //main 15 second auton
 
 void mainAuton() {
-    chassis.setPose(chassis.getPose().x, chassis.getPose().y, getFront(), chassis.getPose().theta); //insert values as x, y, sensor reading, theta
+    chassis.setPose(chassis.getPose().x, getFront(), chassis.getPose().theta); // getFront() corrects the y coordinate
     //move away from toggle
     chassis.moveToPoint(-48, 0, 2000);
     //move towards alliance goal
     chassis.turnToHeading(-90, 2000);
     lift.move_absolute(300, 110);
-    chassis.setPose(chassis.getPose().x, chassis.getPose().y, getLeft(), chassis.getPose().theta); //insert values as x, y, sensor reading, theta
+    chassis.setPose(getLeft(), chassis.getPose().y, chassis.getPose().theta); // getLeft() corrects the x coordinate
     chassis.moveToPoint(-48, 22, 1000, {.forwards = false});
     //score in alliance goal
     lift.move_absolute(200, 110);

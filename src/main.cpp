@@ -37,7 +37,7 @@ enum class LiftState {
 
 LiftState current_lift_state = LiftState::Bottom;
 
-int rotationMechState = 1;
+int rotationMechState = 0; // 0 = resting at 0 (down), matching the mechanism's actual position at boot
 int clawState = 0;
 
 // double getDegreesForState(LiftState state) {
@@ -74,11 +74,44 @@ int clawState = 0;
 void zeroLift() {
     lift.move(-70);
     rotationMech.move_absolute(90, 100);
+    rotationMechState = 0; // 90 is closer to the down (0) reference than up (-270)
     claw.move(120);
     pros::delay(500);
     claw.brake();
+    clawState = 1; // claw ends up open
     lift.brake();
 
+}
+
+// Closes the claw at full power until it stalls against the pin (or a timeout elapses),
+// then backs off to a lower holding voltage so it doesn't keep fighting something it already has.
+void closeClawUntilStall() {
+    const double stallVelocityThreshold = 5;  // RPM; below this counts as "not moving"
+    const int stallReadingsNeeded = 5;        // consecutive low-velocity readings before declaring a stall
+    const int rampUpGraceMs = 150;            // ignore the initial near-zero velocity while it's still starting to move
+    const int maxCloseMs = 1500;              // safety timeout in case nothing is actually gripped
+
+    claw.move(-120);
+    pros::delay(rampUpGraceMs);
+
+    int stalledReadings = 0;
+    int elapsedMs = rampUpGraceMs;
+    while (elapsedMs < maxCloseMs) {
+        double actualVelocity = claw.get_actual_velocity();
+        if (actualVelocity < 0) actualVelocity = -actualVelocity;
+
+        if (actualVelocity < stallVelocityThreshold) {
+            stalledReadings++;
+            if (stalledReadings >= stallReadingsNeeded) break;
+        } else {
+            stalledReadings = 0;
+        }
+
+        pros::delay(10);
+        elapsedMs += 10;
+    }
+
+    claw.brake(); // stop pushing once stalled (or after the timeout); HOLD brake mode keeps the grip
 }
 
 void handleClaw() { // 0 for closed, 1 for open
@@ -89,9 +122,7 @@ void handleClaw() { // 0 for closed, 1 for open
         claw.brake();
     } else {
         clawState = 0;
-        claw.move(-120);
-        pros::delay(500);
-        claw.move(-60);
+        closeClawUntilStall();
     }
 }
 
@@ -114,13 +145,16 @@ void pullFromIntake() {
     pros::delay(200);
     //face claw downwward
     rotationMech.move_absolute(-270, 100);
+    rotationMechState = 1; // now at the up (-270) reference
     //grab from intake then apply constant claw pressure
     lift.move_absolute(0, 100);
     claw.move(-120);
     pros::delay(100);
     claw.move(-60);
+    clawState = 0; // claw ends up closed
     lift.move_absolute(100, 100);
     rotationMech.move_absolute(90, 100);
+    rotationMechState = 0; // 90 is closer to the down (0) reference than up (-270)
     rotationMech.brake();
 }
 
@@ -208,9 +242,11 @@ void on_center_button() {
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-    pros::lcd::initialize();
-    claw.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); 
-    rotationMech.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); 
+    pros::lcd::initialize(); // initialize brain screen
+    claw.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); // actively hold position instead of coasting after claw.brake()
+    claw.set_current_limit(1200); // cap current draw (default 2500mA) so sustained stall/hold pressure runs cooler
+    rotationMech.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); // resist gravity/external torque once at target
+
     lift.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
 
     chassis.calibrate(); 
@@ -317,11 +353,11 @@ void opcontrol() {
         }
 
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
-            lift.move(90);  // Move Up (Full power)
-        } 
+            lift.move_velocity(100);  // Move Up (closed-loop RPM, consistent speed regardless of gravity)
+        }
         else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
-            lift.move(-90); // Move Down (Full power)
-        } 
+            lift.move_velocity(-100); // Move Down (closed-loop RPM, consistent speed regardless of gravity)
+        }
         else {
             lift.brake();      // Automatically brakes due to HOLD mode
         }
