@@ -26,7 +26,7 @@ public:
     );
 
     //Finishes an inputhandler tick & calculates the filtered output
-    double inputHandler::tick(double dT/*Time since the last tick was called*/)
+    double tick(double dT/*Time since the last tick was called*/)
     {   
         unsigned int usedChannelCount = 0;
         float avgIn = 0;
@@ -48,14 +48,14 @@ public:
     }
     
     //Fetches the output of the last finished tick.
-    double inputHandler::fetchTick()
+    double fetchTick()
     {
         return tickOut;
     }
 
     //Gives input for a tick, Different channels average w/ each other, rewriting to a channel overrides it.
-    void inputHandler::input(double input, unsigned int channel)
+    void input(double input, unsigned int channel)
     {
         inputChannels[channel] = input;
     }
-}
+};
