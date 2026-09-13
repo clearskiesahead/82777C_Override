@@ -264,18 +264,18 @@ void competition_initialize() {}
  */
 void autonomous() {
     // set position to x:0, y:0, heading:0
-    pros::delay(3000);
+    while (true) {
+        printf("Cord-x: %f\n", chassis.getPose().x);
+        printf("Cord-y: %f\n", chassis.getPose().y);
+        printf("Heading: %f\n", chassis.getPose().theta);
+        pros::delay(100);
+    }
+
     chassis.setPose(0, 0, 0);
     pros::delay(3000);
     // turn to face heading 90 with a very long timeout
     chassis.moveToPoint(24, 0, 5000, {.maxSpeed = 50});
     chassis.turnToHeading(90, 5000);
-
-    while (true) {
-        printf("Cord-x: %f\n", chassis.getPose().x);
-        printf("Cord-y: %f\n", chassis.getPose().y);
-        printf("Heading: %f\n", chassis.getPose().theta);
-    }
 
 
 }
