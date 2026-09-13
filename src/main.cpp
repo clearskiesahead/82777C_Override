@@ -96,7 +96,7 @@ void closeClawUntilStall() {
     claw.brake(); // stop pushing once stalled (or after the timeout); HOLD brake mode keeps the grip
 }
 
-void handleClaw() { // 0 for closed, 1 for open
+void toggleClaw() { // 0 for closed, 1 for open
     if (clawState == 0) {
         clawState = 1;
         claw.move(120);
@@ -108,7 +108,7 @@ void handleClaw() { // 0 for closed, 1 for open
     }
 }
 
-void handleRotation() {
+void toggleRotationMech() {
     if (rotationMechState == 0) {
         rotationMechState = 1;
         rotationMech.move_absolute(-270, 100);
@@ -121,7 +121,7 @@ void handleRotation() {
 void pullFromIntake() {
     // set claw to open
     clawState = 1;
-    handleClaw();
+    toggleClaw();
     lift.move_absolute(50, 100);
     //move lift to position for claw to intake transition
     pros::delay(200);
@@ -421,11 +421,11 @@ void opcontrol() {
         // }
 
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
-            handleClaw();
+            toggleClaw();
         }
 
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)) {
-            handleRotation();
+            toggleRotationMech();
         }
 
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
