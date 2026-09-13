@@ -255,6 +255,13 @@ void competition_initialize() {}
 // and then just prints the live pose forever so you can push the robot around by hand
 // and check whether the reported X/Y/Theta match what you actually did.
 //
+// Lines 0-2 show chassis.getPose() (LemLib's computed position/heading).
+// Lines 3-5 show the RAW sensors underneath it, bypassing LemLib entirely: the IMU's
+// own heading, and each drive motor group's own encoder position. If pose (0-2) is
+// frozen but the raw readings (3-5) change when you move the robot, the sensors are
+// fine and LemLib's internal odometry task isn't running/updating. If the raw readings
+// are ALSO frozen, the problem is upstream of LemLib -- a sensor/wiring/port issue.
+//
 // How to use it:
 //   1. Call this instead of your real autonomous routine (temporarily swap the call
 //      in autonomous(), or just invoke it from initialize() for a bench test).
@@ -276,7 +283,22 @@ void debug_auton() {
         pros::lcd::print(0, "X: %f", pose.x);
         pros::lcd::print(1, "Y: %f", pose.y);
         pros::lcd::print(2, "Theta: %f", pose.theta);
-        printf("X: %f, Y: %f, Theta: %f\n", pose.x, pose.y, pose.theta);
+
+        double rawImuHeading = imu.get_heading();
+        double rawLeftPos = left_motor_group.get_position();
+        double rawRightPos = right_motor_group.get_position();
+        // status: 0=ready, 19=calibrating, 255=error
+        // orientation: 0=Z_UP, 1=Z_DOWN, 2=X_UP, 3=X_DOWN, 4=Y_UP, 5=Y_DOWN, 255=error/undetected
+        int imuStatus = static_cast<int>(imu.get_status());
+        int imuOrientation = static_cast<int>(imu.get_physical_orientation());
+        pros::lcd::print(3, "raw IMU heading: %f", rawImuHeading);
+        pros::lcd::print(4, "raw left pos: %f", rawLeftPos);
+        pros::lcd::print(5, "raw right pos: %f", rawRightPos);
+        pros::lcd::print(6, "IMU status: %d, orient: %d", imuStatus, imuOrientation);
+
+        printf("pose X: %f, Y: %f, Theta: %f | raw IMU heading: %f, left pos: %f, right pos: %f | IMU status: %d, "
+               "orientation: %d\n",
+               pose.x, pose.y, pose.theta, rawImuHeading, rawLeftPos, rawRightPos, imuStatus, imuOrientation);
         pros::delay(100); // slow enough to actually read while pushing the robot by hand
     }
 }
