@@ -342,7 +342,9 @@ void debug_auton() {
  }
 
 void autonomous() {
-    debug_auton();
+    chassis.setPose(0, 0, 0);
+    
+    chassis.moveToPoint(24, 0, 2000);
 }
 
 /**
