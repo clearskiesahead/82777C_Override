@@ -147,9 +147,9 @@ lemlib::OdomSensors sensors(&vertical_tracking_wheel,
                              nullptr, // no second horizontal tracking wheel
                              &imu);
 // lateral PID controller
-lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
+lemlib::ControllerSettings lateral_controller(1, // proportional gain (kP)
                                               0, // integral gain (kI)
-                                              3, // derivative gain (kD)
+                                              1, // derivative gain (kD)
                                               0, // anti windup
                                               0, // small error range, in inches
                                               0, // small error range timeout, in milliseconds
@@ -159,9 +159,9 @@ lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
 );
 
 // angular PID controller
-lemlib::ControllerSettings angular_controller(2, // proportional gain (kP)
+lemlib::ControllerSettings angular_controller(1, // proportional gain (kP)
                                               0, // integral gain (kI)
-                                              10, // derivative gain (kD)
+                                              1, // derivative gain (kD)
                                               0, // anti windup
                                               0, // small error range, in degrees
                                               0, // small error range timeout, in milliseconds
@@ -371,9 +371,9 @@ void debug_auton() {
  }
 
 void autonomous() {
-    chassis.setPose(0, 0, 0);
-    
-    chassis.moveToPoint(24, 0, 2000);
+    chassis.setPose(0,0,0);
+    chassis.turnToHeading(90, 2000);
+
 }
 
 /**
