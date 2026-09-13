@@ -16,6 +16,11 @@ pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
 pros::MotorGroup left_motor_group({3, 4}, pros::MotorGearset::blue);
 pros::MotorGroup right_motor_group({1, 2}, pros::MotorGearset::blue);
+
+lemlib::TrackingWheel horizontal_tracking_wheel(&right_motor_group, lemlib::Omniwheel::NEW_4, -5.75, 600);
+// vertical tracking wheel
+lemlib::TrackingWheel vertical_tracking_wheel(&left_motor_group, lemlib::Omniwheel::NEW_4, -2.5, 600);
+
 pros::Motor intake(5);
 pros::MotorGroup lift({6, -7}, pros::MotorGearset::green);
 pros::Motor claw(8, pros::v5::MotorGears::red);
@@ -26,6 +31,8 @@ pros::Distance leftdistance('C');
 pros::Distance rightdistance('D');
 
 pros::Imu imu(20);
+
+lemlib::Drivetrain drivetrain(&left_motor_group, &right_motor_group, 10, lemlib::Omniwheel::NEW_4, 257, 2);
 
 
 enum class LiftState {
@@ -39,37 +46,6 @@ LiftState current_lift_state = LiftState::Bottom;
 
 int rotationMechState = 0; // 0 = resting at 0 (down), matching the mechanism's actual position at boot
 int clawState = 0;
-
-// double getDegreesForState(LiftState state) {
-//     switch (state) {
-//         case LiftState::Bottom: return 0.0;
-//         case LiftState::Low:    return 300.0;
-//         case LiftState::High:   return 900.0;
-//         case LiftState::Top:    return 1200.0;
-//         default:                return 0.0;
-//     }
-// }
-
-// void moveLiftToState(LiftState state) {
-//     double targetDegrees = getDegreesForState(state);
-//     lift.move_absolute(targetDegrees, 50);
-// }
-
-// // Cycle up through the presets and move the lift to the new preset
-// void cycleLiftUp() {
-//     if (current_lift_state == LiftState::Bottom)      current_lift_state = LiftState::Low;
-//     else if (current_lift_state == LiftState::Low)    current_lift_state = LiftState::High;
-//     else if (current_lift_state == LiftState::High)   current_lift_state = LiftState::Top;
-//     moveLiftToState(current_lift_state);
-// }
-
-// // Cycle down through the presets and move the lift to the new preset
-// void cycleLiftDown() {
-//     if (current_lift_state == LiftState::Top)         current_lift_state = LiftState::High;
-//     else if (current_lift_state == LiftState::High)   current_lift_state = LiftState::Low;
-//     else if (current_lift_state == LiftState::Low)    current_lift_state = LiftState::Bottom;
-//     moveLiftToState(current_lift_state);
-// }
 
 void zeroLift() {
     lift.move(-70);
@@ -159,19 +135,33 @@ void pullFromIntake() {
 }
 
 
-lemlib::OdomSensors sensors(nullptr, // no vertical tracking wheel
+lemlib::OdomSensors sensors(&vertical_tracking_wheel, // no vertical tracking wheel
                              nullptr, // no second vertical tracking wheel
                              nullptr, // no horizontal tracking wheel
                              nullptr, // no second horizontal tracking wheel
                              &imu);
+// lateral PID controller
+lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
+                                              0, // integral gain (kI)
+                                              3, // derivative gain (kD)
+                                              0, // anti windup
+                                              0, // small error range, in inches
+                                              0, // small error range timeout, in milliseconds
+                                              0, // large error range, in inches
+                                              0, // large error range timeout, in milliseconds
+                                              0 // maximum acceleration (slew)
+);
 
-// drivetrain settings
-lemlib::Drivetrain drivetrain(&left_motor_group, // left motor group
-                              &right_motor_group, // right motor group
-                              10, // 10 inch track width
-                              lemlib::Omniwheel::NEW_4, // using new 4" omnis
-                              257, // drivetrain rpm is 360
-                              2 // horizontal drift is 2 (for now)
+// angular PID controller
+lemlib::ControllerSettings angular_controller(2, // proportional gain (kP)
+                                              0, // integral gain (kI)
+                                              10, // derivative gain (kD)
+                                              0, // anti windup
+                                              0, // small error range, in degrees
+                                              0, // small error range timeout, in milliseconds
+                                              0, // large error range, in degrees
+                                              0, // large error range timeout, in milliseconds
+                                              0 // maximum acceleration (slew)
 );
 
 // input curve for throttle input during driver control
@@ -186,30 +176,6 @@ lemlib::ExpoDriveCurve steer_curve(3, // joystick deadband out of 127
                                   1.019 // expo curve gain
 );
 
-// lateral PID controller
-lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
-                                              0, // integral gain (kI)
-                                              3, // derivative gain (kD)
-                                              3, // anti windup
-                                              1, // small error range, in inches
-                                              100, // small error range timeout, in milliseconds
-                                              3, // large error range, in inches
-                                              500, // large error range timeout, in milliseconds
-                                              20 // maximum acceleration (slew)
-);
-
-// angular PID controller
-lemlib::ControllerSettings angular_controller(2, // proportional gain (kP)
-                                              0, // integral gain (kI)
-                                              10, // derivative gain (kD)
-                                              3, // anti windup
-                                              1, // small error range, in degrees
-                                              100, // small error range timeout, in milliseconds
-                                              3, // large error range, in degrees
-                                              500, // large error range timeout, in milliseconds
-                                              0 // maximum acceleration (slew)
-);
-
 // create the chassis
 lemlib::Chassis chassis(drivetrain,
                         lateral_controller,
@@ -218,6 +184,7 @@ lemlib::Chassis chassis(drivetrain,
                         &throttle_curve, 
                         &steer_curve
 );
+
 
 /**
  * A callback function for LLEMU's center button.
@@ -297,10 +264,20 @@ void competition_initialize() {}
  */
 void autonomous() {
     // set position to x:0, y:0, heading:0
+    pros::delay(3000);
     chassis.setPose(0, 0, 0);
+    pros::delay(3000);
     // turn to face heading 90 with a very long timeout
-    chassis.moveToPoint(10, 0, 5000);
+    chassis.moveToPoint(24, 0, 5000, {.maxSpeed = 50});
     chassis.turnToHeading(90, 5000);
+
+    while (true) {
+        printf("Cord-x: %f\n", chassis.getPose().x);
+        printf("Cord-y: %f\n", chassis.getPose().y);
+        printf("Heading: %f\n", chassis.getPose().theta);
+    }
+
+
 }
 
 /**
@@ -366,6 +343,14 @@ void opcontrol() {
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
             zeroLift();
         }
+
+        pros::lcd::print(0, "X: %f", chassis.getPose().x); 
+        pros::lcd::print(1, "Y: %f", chassis.getPose().y); 
+        pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); 
+        
+        printf("Cord-x: %f\n", chassis.getPose().x);
+        printf("Cord-y: %f\n", chassis.getPose().y);
+        printf("Heading: %f\n", chassis.getPose().theta);
 
         // delay to save resources
         pros::delay(25);
