@@ -251,6 +251,36 @@ void disabled() {}
  */
 void competition_initialize() {}
 
+// Diagnostic helper: does NOT drive the robot at all. It resets odometry to (0,0,0)
+// and then just prints the live pose forever so you can push the robot around by hand
+// and check whether the reported X/Y/Theta match what you actually did.
+//
+// How to use it:
+//   1. Call this instead of your real autonomous routine (temporarily swap the call
+//      in autonomous(), or just invoke it from initialize() for a bench test).
+//   2. Put the robot on the ground with driver control NOT touching the joysticks
+//      (motors should be idle -- this is a pure sensor readout, not a motion test).
+//   3. Physically push the robot forward exactly 24 inches (measure it) and watch
+//      the numbers. Given LemLib's compass-style heading (0 degrees = facing +Y),
+//      pushing it "forward" should increase Y, not X, while X and Theta stay near 0.
+//      If instead X changes and Y doesn't, that confirms the "forward is +Y" mixup
+//      is exactly what happened in the runaway moveToPoint(24, 0, ...) call.
+//   4. Then try pushing it sideways, and turning it in place, to check X and Theta
+//      the same way. Each axis should only respond to the motion that should affect it.
+void debug_auton() {
+    chassis.setPose(0, 0, 0);
+    printf("debug_auton: pose reset to (0, 0, 0). Push the robot by hand and watch the numbers below.\n");
+
+    while (true) {
+        lemlib::Pose pose = chassis.getPose();
+        pros::lcd::print(0, "X: %f", pose.x);
+        pros::lcd::print(1, "Y: %f", pose.y);
+        pros::lcd::print(2, "Theta: %f", pose.theta);
+        printf("X: %f, Y: %f, Theta: %f\n", pose.x, pose.y, pose.theta);
+        pros::delay(100); // slow enough to actually read while pushing the robot by hand
+    }
+}
+
 /**
  * Runs the user autonomous code. This function will be started in its own task
  * with the default priority and stack size whenever the robot is enabled via
@@ -262,7 +292,8 @@ void competition_initialize() {}
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
-void autonomous() {
+
+ void ans_auton() {
     // set position to x:0, y:0, heading:0
     printf("Cord-x: %f\n", chassis.getPose().x);
     printf("Cord-y: %f\n", chassis.getPose().y);
@@ -285,7 +316,15 @@ void autonomous() {
 
     chassis.turnToHeading(90, 5000);
 
+    while (true) {
+        printf("Cord-x: %f\n", chassis.getPose().x);
+        printf("Cord-y: %f\n", chassis.getPose().y);
+        printf("Heading: %f\n", chassis.getPose().theta);
+    }
+ }
 
+void autonomous() {
+    debug_auton();
 }
 
 /**
