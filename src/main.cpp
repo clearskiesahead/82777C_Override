@@ -282,7 +282,7 @@ void autonomous() {
     printf("Cord-y: %f\n", chassis.getPose().y);
     printf("Heading: %f\n", chassis.getPose().theta);
     pros::delay(20);
-    
+
     chassis.turnToHeading(90, 5000);
 
 
@@ -341,7 +341,7 @@ void opcontrol() {
             lift.move_velocity(100);  // Move Up (closed-loop RPM, consistent speed regardless of gravity)
         }
         else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
-            lift.move_velocity(-100); // Move Down (closed-loop RPM, consistent speed regardless of gravity)
+            lift.move_velocity(-70); // Move Down (closed-loop RPM, consistent speed regardless of gravity)
         }
         else {
             lift.brake();      // Automatically brakes due to HOLD mode
