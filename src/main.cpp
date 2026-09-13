@@ -15,7 +15,17 @@
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
 pros::MotorGroup left_motor_group({3, 4}, pros::MotorGearset::blue);
-pros::MotorGroup right_motor_group({1, 2}, pros::MotorGearset::blue);
+// right side reversed (negative ports) so that a raw positive encoder/voltage direction means
+// "this wheel spins to push the robot forward" on BOTH sides -- previously this mirroring was
+// only patched downstream in opcontrol()'s joystick math, which fixed driving but left the raw
+// encoders reporting a mismatched sign relationship, corrupting tracking-wheel-based odometry.
+pros::MotorGroup right_motor_group({-1, -2}, pros::MotorGearset::blue);
+
+// rpm is 257 (not the blue cartridge's native 600) to account for the drivetrain's 36:84 external
+// gear reduction (600 * 36/84 ~= 257) -- matches the rpm already used for the Drivetrain below.
+lemlib::TrackingWheel horizontal_tracking_wheel(&right_motor_group, lemlib::Omniwheel::NEW_4, -5.75, 257);
+// vertical tracking wheel
+lemlib::TrackingWheel vertical_tracking_wheel(&left_motor_group, lemlib::Omniwheel::NEW_4, -2.5, 257);
 
 pros::Motor intake(5);
 pros::MotorGroup lift({6, -7}, pros::MotorGearset::green);
@@ -131,7 +141,7 @@ void pullFromIntake() {
 }
 
 
-lemlib::OdomSensors sensors(nullptr, // no vertical tracking wheel
+lemlib::OdomSensors sensors(&vertical_tracking_wheel,
                              nullptr, // no second vertical tracking wheel
                              nullptr, // no horizontal tracking wheel
                              nullptr, // no second horizontal tracking wheel
@@ -219,14 +229,18 @@ void initialize() {
         pros::delay(10);
     }
 
-    pros::Task screen_task([&]() {
-        while (true) {
-            pros::lcd::print(0, "X: %f", chassis.getPose().x); 
-            pros::lcd::print(1, "Y: %f", chassis.getPose().y); 
-            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); 
-            pros::delay(20);
-        }
-    });
+    // NOTE: disabled while debugging debug_auton() -- this task also writes lines 0-2,
+    // which made it impossible to tell whether debug_auton()'s own loop was actually
+    // running (lines 0-2 would keep updating from THIS task even if debug_auton() died).
+    // Re-enable once debug_auton() is confirmed working correctly.
+    // pros::Task screen_task([&]() {
+    //     while (true) {
+    //         pros::lcd::print(0, "X: %f", chassis.getPose().x);
+    //         pros::lcd::print(1, "Y: %f", chassis.getPose().y);
+    //         pros::lcd::print(2, "Theta: %f", chassis.getPose().theta);
+    //         pros::delay(20);
+    //     }
+    // });
 }
 
 /**
@@ -272,29 +286,44 @@ void competition_initialize() {}
 //      the same way. Each axis should only respond to the motion that should affect it.
 void debug_auton() {
     chassis.setPose(0, 0, 0);
-    printf("debug_auton: pose reset to (0, 0, 0). Push the robot by hand and watch the numbers below.\n");
+    // 0=degrees, 1=rotations, 2=counts -- settles whether "left pos"/"right pos" below are degrees or rotations
+    int leftEncoderUnits = static_cast<int>(left_motor_group.get_encoder_units());
+    int rightEncoderUnits = static_cast<int>(right_motor_group.get_encoder_units());
+    printf("debug_auton: pose reset to (0, 0, 0). left encoder units: %d, right encoder units: %d (0=degrees, "
+           "1=rotations, 2=counts)\n",
+           leftEncoderUnits, rightEncoderUnits);
+    printf("Push the robot by hand and watch the numbers below.\n");
 
+    int heartbeat = 0;
     while (true) {
-        lemlib::Pose pose = chassis.getPose();
-        pros::lcd::print(0, "X: %f", pose.x);
-        pros::lcd::print(1, "Y: %f", pose.y);
-        pros::lcd::print(2, "Theta: %f", pose.theta);
+        heartbeat++;
 
-        double rawImuHeading = imu.get_heading();
+        lemlib::Pose pose = chassis.getPose();
+        double rawImuHeading = imu.get_heading(); // [0,360) -- yaw about the sensor's own hardcoded reference axis
+        double rawPitch = imu.get_pitch();
+        double rawRoll = imu.get_roll();
+        double rawYaw = imu.get_yaw();
         double rawLeftPos = left_motor_group.get_position();
         double rawRightPos = right_motor_group.get_position();
-        // status: 0=ready, 19=calibrating, 255=error
-        // orientation: 0=Z_UP, 1=Z_DOWN, 2=X_UP, 3=X_DOWN, 4=Y_UP, 5=Y_DOWN, 255=error/undetected
+        // status is a BITMASK, not a simple enum: bit 0 (value 1) set = still calibrating, 0xFF = hard error
         int imuStatus = static_cast<int>(imu.get_status());
+        // orientation: 0=Z_UP, 1=Z_DOWN, 2=X_UP, 3=X_DOWN, 4=Y_UP, 5=Y_DOWN, 255=error/undetected
         int imuOrientation = static_cast<int>(imu.get_physical_orientation());
-        pros::lcd::print(3, "raw IMU heading: %f", rawImuHeading);
-        pros::lcd::print(4, "raw left pos: %f", rawLeftPos);
-        pros::lcd::print(5, "raw right pos: %f", rawRightPos);
-        pros::lcd::print(6, "IMU status: %d, orient: %d", imuStatus, imuOrientation);
 
-        printf("pose X: %f, Y: %f, Theta: %f | raw IMU heading: %f, left pos: %f, right pos: %f | IMU status: %d, "
-               "orientation: %d\n",
-               pose.x, pose.y, pose.theta, rawImuHeading, rawLeftPos, rawRightPos, imuStatus, imuOrientation);
+        pros::lcd::print(0, "X: %.2f  Y: %.2f", pose.x, pose.y);
+        pros::lcd::print(1, "Theta: %.2f", pose.theta);
+        pros::lcd::print(2, "raw heading: %.2f", rawImuHeading);
+        pros::lcd::print(3, "pitch:%.1f roll:%.1f yaw:%.1f", rawPitch, rawRoll, rawYaw);
+        pros::lcd::print(4, "left:%.2f right:%.2f", rawLeftPos, rawRightPos);
+        pros::lcd::print(5, "status:%d orient:%d", imuStatus, imuOrientation);
+        // if this number isn't climbing, the loop itself isn't running -- meaning something
+        // above crashed/errored before reaching here, or you're looking at stale (not-just-rebuilt) code.
+        pros::lcd::print(6, "heartbeat: %d", heartbeat);
+
+        printf("pose X: %f, Y: %f, Theta: %f | raw heading: %f, pitch: %f, roll: %f, yaw: %f | left pos: %f, right "
+               "pos: %f | status: %d, orientation: %d | heartbeat: %d\n",
+               pose.x, pose.y, pose.theta, rawImuHeading, rawPitch, rawRoll, rawYaw, rawLeftPos, rawRightPos,
+               imuStatus, imuOrientation, heartbeat);
         pros::delay(100); // slow enough to actually read while pushing the robot by hand
     }
 }
@@ -367,8 +396,11 @@ void opcontrol() {
         int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
 
         // move the robot
-        // turn is negated because swapping the left/right motor ports (3/4 <-> 1/2) reversed turn direction
-        chassis.arcade(-rightX, leftY);
+        // NOTE: right_motor_group's ports are now reversed at the declaration (the actual root cause
+        // of the earlier turn-direction issue), so this no longer needs the -rightX negation that used
+        // to compensate for it downstream. If turning comes out backwards now, re-add the negation here
+        // instead of re-reversing the ports again -- don't stack two fixes for the same problem.
+        chassis.arcade(rightX, leftY);
 
         // control the intake
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
