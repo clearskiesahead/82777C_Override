@@ -17,10 +17,6 @@ pros::Controller controller(pros::E_CONTROLLER_MASTER);
 pros::MotorGroup left_motor_group({3, 4}, pros::MotorGearset::blue);
 pros::MotorGroup right_motor_group({1, 2}, pros::MotorGearset::blue);
 
-lemlib::TrackingWheel horizontal_tracking_wheel(&right_motor_group, lemlib::Omniwheel::NEW_4, -5.75, 600);
-// vertical tracking wheel
-lemlib::TrackingWheel vertical_tracking_wheel(&left_motor_group, lemlib::Omniwheel::NEW_4, -2.5, 600);
-
 pros::Motor intake(5);
 pros::MotorGroup lift({6, -7}, pros::MotorGearset::green);
 pros::Motor claw(8, pros::v5::MotorGears::red);
@@ -32,7 +28,7 @@ pros::Distance rightdistance('D');
 
 pros::Imu imu(20);
 
-lemlib::Drivetrain drivetrain(&left_motor_group, &right_motor_group, 10, lemlib::Omniwheel::NEW_4, 257, 2);
+lemlib::Drivetrain drivetrain(&left_motor_group, &right_motor_group, 11, lemlib::Omniwheel::NEW_4, 257, 2);
 
 
 enum class LiftState {
@@ -135,7 +131,7 @@ void pullFromIntake() {
 }
 
 
-lemlib::OdomSensors sensors(&vertical_tracking_wheel, // no vertical tracking wheel
+lemlib::OdomSensors sensors(nullptr, // no vertical tracking wheel
                              nullptr, // no second vertical tracking wheel
                              nullptr, // no horizontal tracking wheel
                              nullptr, // no second horizontal tracking wheel
