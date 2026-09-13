@@ -1,10 +1,11 @@
 #include "api.h"
 
+
 class inputHandler
 {
 private:
     double mult;
-    float smoothingRate;
+    float smoothRate;
     double outMax;
     double outMin;
 
@@ -14,13 +15,11 @@ private:
     //Calculated return for last finished tick
     double tickOut = 0;
 
-    double outputRange = 0;
-
 
 public:
     inputHandler(double mult, // Flat output mult
                  // Maximum time it takes for the output to reach the input
-                 float smoothingRate,
+                 float smoothRate,
                  double outMax,  // Max output value
                  double outMin // Min output value
     );
@@ -28,21 +27,23 @@ public:
     //Finishes an inputhandler tick & calculates the filtered output
     double tick(double dT/*Time since the last tick was called*/)
     {   
+        double outRange = outMax - outMin;
+
         unsigned int usedChannelCount = 0;
-        float avgIn = 0;
+        float sumIn = 0;
         for (int i=0; i<16; i++) {
-            if (isChannelUsed[i] = true) {
-                avgIn += inputChannels[i];
+            if (isChannelUsed[i]) {
+                sumIn += inputChannels[i];
                 usedChannelCount += 1;
             }
             
-        } avgIn = avgIn / usedChannelCount;
+        } double avgIn = sumIn / usedChannelCount;
 
-        if (abs(avgIn*mult - tickOut) <= 1) {
-            tickOut = avgIn * mult;
-        } else {
-            tickOut += std::clamp(avgIn*mult*dT-tickOut, outMin*dT, outMax*dT) ;
-        } 
+        tickOut += std::clamp
+             (avgIn - tickOut,
+             -smoothRate*outRange,
+             smoothRate*outRange) 
+             * dT;
 
         return tickOut;
     }
